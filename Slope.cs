@@ -281,7 +281,7 @@ public struct LSREGR_COUNT
 }
 
 /// <summary>
-/// Least-Squares Linear Regressions Y-Intercept
+/// Least-Squares Linear Regression coefficient of determination
 /// </summary>
 [System.Serializable]
 [Microsoft.SqlServer.Server.SqlUserDefinedAggregate(
@@ -412,5 +412,202 @@ public struct LSREGR_R2
             return (st == SqlDouble.Null || sr == SqlDouble.Null) ? 
                 SqlDouble.Null : (st - sr) / st;
         }
+    }
+}
+
+/// <summary>
+/// Least-Squares Linear Regressions x-average
+/// </summary>
+[System.Serializable]
+[Microsoft.SqlServer.Server.SqlUserDefinedAggregate(
+    Microsoft.SqlServer.Server.Format.Native,
+    IsInvariantToDuplicates = false,
+    IsInvariantToNulls = true,
+    IsInvariantToOrder = true,
+    IsNullIfEmpty = true,
+    Name = "LSREGR_AVGX")]
+public struct LSREGR_AVGX
+{
+    /// <summary>
+    /// Number of rows
+    /// </summary>
+    private SqlInt64 N { get; set; }
+    /// <summary>
+    /// Sx = Sum(x) from 1 to N
+    /// </summary>
+    private SqlDouble Sx { get; set; }
+    /// <summary>
+    /// Function for query processor to intialize the computation 
+    /// of the aggregation.
+    /// </summary>
+    public void Init()
+    {
+        N = 0;
+        Sx = SqlDouble.Zero;
+    }
+    /// <summary>
+    /// Accumulation of the values being passed in
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    public void Accumulate(SqlDouble x, SqlDouble y)
+    {
+        if (x.IsNull || y.IsNull)
+        {/* do nothing */}
+        else
+        {
+            N += 1;
+            Sx += x;
+        }
+    }
+    /// <summary>
+    /// Merge another instance of the aggregate class with current
+    /// instance.
+    /// </summary>
+    /// <param name="group"></param>
+    public void Merge(LSREGR_AVGX group)
+    {
+        if (
+            group.N == 0 ||
+            group.Sx == SqlDouble.Zero)
+        {/* if ANY is NULL, then do nothing */}
+        else
+        {
+            N += group.N;
+            Sx += group.Sx;
+        }
+    }
+    /// <summary>
+    /// Completes the aggregate computation and returns the result.
+    /// </summary>
+    /// <returns>The result of the aggregation</returns>
+    public SqlDouble Terminate() {  return (N == 0 ? SqlDouble.Null : Sx / N); }
+}
+
+/// <summary>
+/// Least-Squares Linear Regressions y-average
+/// </summary>
+[System.Serializable]
+[Microsoft.SqlServer.Server.SqlUserDefinedAggregate(
+    Microsoft.SqlServer.Server.Format.Native,
+    IsInvariantToDuplicates = false,
+    IsInvariantToNulls = true,
+    IsInvariantToOrder = true,
+    IsNullIfEmpty = true,
+    Name = "LSREGR_AVGY")]
+public struct LSREGR_AVGY
+{
+    /// <summary>
+    /// Number of rows
+    /// </summary>
+    private SqlInt64 N { get; set; }
+    /// <summary>
+    /// Sy = Sum(y) from 1 to N
+    /// </summary>
+    private SqlDouble Sy { get; set; }
+    /// <summary>
+    /// Function for query processor to intialize the computation 
+    /// of the aggregation.
+    /// </summary>
+    public void Init()
+    {
+        N = 0;
+        Sy = SqlDouble.Zero;
+    }
+    /// <summary>
+    /// Accumulation of the values being passed in
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    public void Accumulate(SqlDouble x, SqlDouble y)
+    {
+        if (x.IsNull || y.IsNull)
+        {/* do nothing */}
+        else
+        {
+            N += 1;
+            Sy += y;
+        }
+    }
+    /// <summary>
+    /// Merge another instance of the aggregate class with current
+    /// instance.
+    /// </summary>
+    /// <param name="group"></param>
+    public void Merge(LSREGR_AVGY group)
+    {
+        if (
+            group.N == 0 ||
+            group.Sy == SqlDouble.Zero)
+        {/* if ANY is NULL, then do nothing */}
+        else
+        {
+            N += group.N;
+            Sy += group.Sy;
+        }
+    }
+    /// <summary>
+    /// Completes the aggregate computation and returns the result.
+    /// </summary>
+    /// <returns>The result of the aggregation</returns>
+    public SqlDouble Terminate() { return (N == 0 ? SqlDouble.Null : Sy / N); }
+}
+
+/// <summary>
+/// Least-Squares Linear Regressions Slope
+/// </summary>
+[System.Serializable]
+[Microsoft.SqlServer.Server.SqlUserDefinedAggregate(
+    Microsoft.SqlServer.Server.Format.Native,
+    IsInvariantToDuplicates = false,
+    IsInvariantToNulls = true,
+    IsInvariantToOrder = true,
+    IsNullIfEmpty = true,
+    Name = "LSREGR_SXX")]
+public struct LSREGR_SXX
+{
+    /// <summary>
+    /// Sxx = Sum(x*x) from 1 to N
+    /// </summary>
+    private SqlDouble Sxx { get; set; }
+    /// <summary>
+    /// Function for query processor to intialize the computation 
+    /// of the aggregation.
+    /// </summary>
+    public void Init()
+    {
+        Sxx = SqlDouble.Zero;
+    }
+    /// <summary>
+    /// Accumulation of the values being passed in
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    public void Accumulate(SqlDouble x, SqlDouble y)
+    {
+        if (x.IsNull || y.IsNull)
+        {/* do nothing */}
+        else
+        { Sxx += x * x; }
+    }
+    /// <summary>
+    /// Merge another instance of the aggregate class with current
+    /// instance.
+    /// </summary>
+    /// <param name="group"></param>
+    public void Merge(LSREGR_SXX group)
+    {
+        if (group.Sxx == SqlDouble.Zero)
+        {/* if ANY is NULL, then do nothing */}
+        else
+        { Sxx += group.Sxx; }
+    }
+    /// <summary>
+    /// Completes the aggregate computation and returns the result.
+    /// </summary>
+    /// <returns>The result of the aggregation</returns>
+    public SqlDouble Terminate()
+    {
+        return Sxx;
     }
 }
