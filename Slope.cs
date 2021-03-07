@@ -313,9 +313,10 @@ public struct LSREGR_R2
     /// Sy = Sum(y) from 1 to N
     /// </summary>
     private SqlDouble Sy { get; set; }
-
-    private List<SqlDouble> List_y;
-    private List<SqlDouble> List_x;
+    /// <summary>
+    /// Syy = Sum(y*y) from 1 to N
+    /// </summary>
+    private SqlDouble Syy { get; set; }
 
     /// <summary>
     /// Function for query processor to intialize the computation 
@@ -326,11 +327,9 @@ public struct LSREGR_R2
         N = 0;
         Sxy = SqlDouble.Zero;
         Sxx = SqlDouble.Zero;
+        Syy = SqlDouble.Zero;
         Sx = SqlDouble.Zero;
         Sy = SqlDouble.Zero;
-
-        List_y = new List<SqlDouble>();
-        List_x = new List<SqlDouble>();
     }
     /// <summary>
     /// Accumulation of the values being passed in
@@ -346,11 +345,9 @@ public struct LSREGR_R2
             N += 1;
             Sxy += x * y;
             Sxx += x * x;
+            Syy += y * y;
             Sx += x;
             Sy += y;
-
-            List_x.Add(x);
-            List_y.Add(y);
         }
     }
     /// <summary>
@@ -363,19 +360,17 @@ public struct LSREGR_R2
         if (
             group.N == 0 ||
             group.Sxy == SqlDouble.Zero || group.Sxx == SqlDouble.Zero ||
-            group.Sx == SqlDouble.Zero  || group.Sy == SqlDouble.Zero ||
-            group.List_x.Count == 0     || group.List_y.Count == 0)
+            group.Sx == SqlDouble.Zero  || group.Sy == SqlDouble.Zero  ||
+            group.Syy == SqlDouble.Zero)
         {/* if ANY is NULL, then do nothing */}
         else
         {
             N += group.N;
             Sxy += group.Sxy;
             Sxx += group.Sxx;
+            Syy += group.Syy;
             Sx += group.Sx;
             Sy += group.Sy;
-
-            List_x.AddRange(group.List_x);
-            List_y.AddRange(group.List_y);
         }
     }
     /// <summary>
@@ -394,22 +389,16 @@ public struct LSREGR_R2
         SqlDouble intercept = (slope == SqlDouble.Null || mean_x == SqlDouble.Null ||
             mean_y == SqlDouble.Null ? SqlDouble.Null : mean_y - slope * mean_x);
 
-        SqlDouble sr = SqlDouble.Null;
-        SqlDouble st = SqlDouble.Null;
-        if (intercept == SqlDouble.Null || List_y.Count == 0 || List_x.Count == 0)
+        if (intercept == SqlDouble.Null || slope == SqlDouble.Null ) //|| List_y.Count == 0 || List_x.Count == 0)
         {
             return SqlDouble.Null;
         } 
         else
         {
-            for (int i = 0; i < N.Value; ++i)
-            {
-                sr += (List_y[i] - intercept - (slope * List_x[i])) * 
-                      (List_y[i] - intercept - (slope * List_x[i]));
-                st += (List_y[i] - mean_y) * (List_y[i] - mean_y);
-            }
+            SqlDouble sr = Syy - (2 * intercept * Sy) + (2 * intercept * slope * Sx) - (2 * slope * Sxy) + (slope * slope * Sxx) + (intercept * intercept * N);
+            SqlDouble st = Syy - (2 * mean_y * Sy) + (mean_y * mean_y * N);
 
-            return (st == SqlDouble.Null || sr == SqlDouble.Null) ? 
+            return (st == SqlDouble.Null || sr == SqlDouble.Null || st == SqlDouble.Zero) ? 
                 SqlDouble.Null : (st - sr) / st;
         }
     }
