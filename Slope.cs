@@ -670,3 +670,62 @@ public struct LSREGR_SYY
         return Syy;
     }
 }
+
+/// <summary>
+/// Least-Squares Linear Regressions Sum(x*y) from 1 to N
+/// </summary>
+[System.Serializable]
+[Microsoft.SqlServer.Server.SqlUserDefinedAggregate(
+    Microsoft.SqlServer.Server.Format.Native,
+    IsInvariantToDuplicates = false,
+    IsInvariantToNulls = true,
+    IsInvariantToOrder = true,
+    IsNullIfEmpty = true,
+    Name = "LSREGR_SXY")]
+public struct LSREGR_SXY
+{
+    /// <summary>
+    /// Sxx = Sum(x*y) from 1 to N
+    /// </summary>
+    private SqlDouble Sxy { get; set; }
+    /// <summary>
+    /// Function for query processor to intialize the computation 
+    /// of the aggregation.
+    /// </summary>
+    public void Init()
+    {
+        Sxy = SqlDouble.Zero;
+    }
+    /// <summary>
+    /// Accumulation of the values being passed in
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    public void Accumulate(SqlDouble x, SqlDouble y)
+    {
+        if (x.IsNull || y.IsNull)
+        {/* do nothing */}
+        else
+        { Sxy += x * y; }
+    }
+    /// <summary>
+    /// Merge another instance of the aggregate class with current
+    /// instance.
+    /// </summary>
+    /// <param name="group"></param>
+    public void Merge(LSREGR_SXY group)
+    {
+        if (group.Sxy == SqlDouble.Zero)
+        {/* if ANY is NULL, then do nothing */}
+        else
+        { Sxy += group.Sxy; }
+    }
+    /// <summary>
+    /// Completes the aggregate computation and returns the result.
+    /// </summary>
+    /// <returns>The result of the aggregation</returns>
+    public SqlDouble Terminate()
+    {
+        return Sxy;
+    }
+}
