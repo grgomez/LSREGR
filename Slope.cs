@@ -44,7 +44,7 @@ public struct LSREGR_SLOPE
     /// <summary>
     /// Number of rows
     /// </summary>
-    private SqlInt16 N { get; set; }
+    private SqlInt64 N { get; set; }
     /// <summary>
     /// Sxy = Sum(x*y) from 1 to N
     /// </summary>
@@ -141,7 +141,7 @@ public struct LSREGR_INTERCEPT
     /// <summary>
     /// Number of rows
     /// </summary>
-    private SqlInt16 N { get; set; }
+    private SqlInt64 N { get; set; }
     /// <summary>
     /// Sxy = Sum(x*y) from 1 to N
     /// </summary>
@@ -243,7 +243,7 @@ public struct LSREGR_COUNT
     /// <summary>
     /// Number of rows
     /// </summary>
-    private SqlInt16 N { get; set; }
+    private SqlInt64 N { get; set; }
     /// <summary>
     /// Function for query processor to intialize the computation 
     /// of the aggregation.
@@ -278,4 +278,139 @@ public struct LSREGR_COUNT
     /// </summary>
     /// <returns>The result of the aggregation</returns>
     public SqlDouble Terminate() { return N; }
+}
+
+/// <summary>
+/// Least-Squares Linear Regressions Y-Intercept
+/// </summary>
+[System.Serializable]
+[Microsoft.SqlServer.Server.SqlUserDefinedAggregate(
+    Microsoft.SqlServer.Server.Format.Native,
+    IsInvariantToDuplicates = false,
+    IsInvariantToNulls = true,
+    IsInvariantToOrder = true,
+    IsNullIfEmpty = true,
+    Name = "LSREGR_R2")]
+public struct LSREGR_R2
+{
+    /// <summary>
+    /// Number of rows
+    /// </summary>
+    private SqlInt64 N { get; set; }
+    /// <summary>
+    /// Sxy = Sum(x*y) from 1 to N
+    /// </summary>
+    private SqlDouble Sxy { get; set; }
+    /// <summary>
+    /// Sxx = Sum(x*x) from 1 to N
+    /// </summary>
+    private SqlDouble Sxx { get; set; }
+    /// <summary>
+    /// Sx = Sum(x) from 1 to N
+    /// </summary>
+    private SqlDouble Sx { get; set; }
+    /// <summary>
+    /// Sy = Sum(y) from 1 to N
+    /// </summary>
+    private SqlDouble Sy { get; set; }
+
+    private List<SqlDouble> List_y;
+    private List<SqlDouble> List_x;
+
+    /// <summary>
+    /// Function for query processor to intialize the computation 
+    /// of the aggregation.
+    /// </summary>
+    public void Init()
+    {
+        N = 0;
+        Sxy = SqlDouble.Zero;
+        Sxx = SqlDouble.Zero;
+        Sx = SqlDouble.Zero;
+        Sy = SqlDouble.Zero;
+
+        List_y = new List<SqlDouble>();
+        List_x = new List<SqlDouble>();
+    }
+    /// <summary>
+    /// Accumulation of the values being passed in
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    public void Accumulate(SqlDouble x, SqlDouble y)
+    {
+        if (x.IsNull || y.IsNull)
+        {/* do nothing */}
+        else
+        {
+            N += 1;
+            Sxy += x * y;
+            Sxx += x * x;
+            Sx += x;
+            Sy += y;
+
+            List_x.Add(x);
+            List_y.Add(y);
+        }
+    }
+    /// <summary>
+    /// Merge another instance of the aggregate class with current
+    /// instance.
+    /// </summary>
+    /// <param name="group"></param>
+    public void Merge(LSREGR_R2 group)
+    {
+        if (
+            group.N == 0 ||
+            group.Sxy == SqlDouble.Zero || group.Sxx == SqlDouble.Zero ||
+            group.Sx == SqlDouble.Zero  || group.Sy == SqlDouble.Zero ||
+            group.List_x.Count == 0     || group.List_y.Count == 0)
+        {/* if ANY is NULL, then do nothing */}
+        else
+        {
+            N += group.N;
+            Sxy += group.Sxy;
+            Sxx += group.Sxx;
+            Sx += group.Sx;
+            Sy += group.Sy;
+
+            List_x.AddRange(group.List_x);
+            List_y.AddRange(group.List_y);
+        }
+    }
+    /// <summary>
+    /// Completes the aggregate computation and returns the result.
+    /// </summary>
+    /// <returns>The result of the aggregation</returns>
+    public SqlDouble Terminate()
+    {
+        SqlDouble slope = (N == 0 || Sxy == SqlDouble.Zero || Sxx == SqlDouble.Zero ||
+            Sx == SqlDouble.Zero || Sy == SqlDouble.Zero) ?
+            SqlDouble.Null : (N * Sxy - Sx * Sy) / (N * Sxx - Sx * Sx);
+
+        SqlDouble mean_y = (N == 0 ? SqlDouble.Null : Sy / N);
+        SqlDouble mean_x = (N == 0 ? SqlDouble.Null : Sx / N);
+
+        SqlDouble intercept = (slope == SqlDouble.Null || mean_x == SqlDouble.Null ||
+            mean_y == SqlDouble.Null ? SqlDouble.Null : mean_y - slope * mean_x);
+
+        SqlDouble sr = SqlDouble.Null;
+        SqlDouble st = SqlDouble.Null;
+        if (intercept == SqlDouble.Null || List_y.Count == 0 || List_x.Count == 0)
+        {
+            return SqlDouble.Null;
+        } 
+        else
+        {
+            for (int i = 0; i < N.Value; ++i)
+            {
+                sr += (List_y[i] - intercept - (slope * List_x[i])) * 
+                      (List_y[i] - intercept - (slope * List_x[i]));
+                st += (List_y[i] - mean_y) * (List_y[i] - mean_y);
+            }
+
+            return (st == SqlDouble.Null || sr == SqlDouble.Null) ? 
+                SqlDouble.Null : (st - sr) / st;
+        }
+    }
 }
