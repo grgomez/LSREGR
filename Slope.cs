@@ -28,7 +28,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Data.SqlTypes;
 
-
+/// <summary>
+/// Least-Squares Linear Regressions Slope
+/// </summary>
 [System.Serializable]
 [Microsoft.SqlServer.Server.SqlUserDefinedAggregate(
     Microsoft.SqlServer.Server.Format.Native,
@@ -36,8 +38,8 @@ using System.Data.SqlTypes;
     IsInvariantToNulls = true,
     IsInvariantToOrder = true,
     IsNullIfEmpty = true,
-    Name = "SLOPE")]
-public struct SLOPE
+    Name = "LSREGR_SLOPE")]
+public struct LSREGR_SLOPE
 {
     /// <summary>
     /// Number of rows
@@ -94,7 +96,7 @@ public struct SLOPE
     /// instance.
     /// </summary>
     /// <param name="group"></param>
-    public void Merge(SLOPE group)
+    public void Merge(LSREGR_SLOPE group)
     {
         if (
             group.N == 0 || 
@@ -123,6 +125,9 @@ public struct SLOPE
     }
 }
 
+/// <summary>
+/// Least-Squares Linear Regressions Y-Intercept
+/// </summary>
 [System.Serializable]
 [Microsoft.SqlServer.Server.SqlUserDefinedAggregate(
     Microsoft.SqlServer.Server.Format.Native,
@@ -130,8 +135,8 @@ public struct SLOPE
     IsInvariantToNulls = true,
     IsInvariantToOrder = true,
     IsNullIfEmpty = true,
-    Name = "INTERCEPT")]
-public struct INTERCEPT
+    Name = "LSREGR_INTERCEPT")]
+public struct LSREGR_INTERCEPT
 {
     /// <summary>
     /// Number of rows
@@ -188,7 +193,7 @@ public struct INTERCEPT
     /// instance.
     /// </summary>
     /// <param name="group"></param>
-    public void Merge(INTERCEPT group)
+    public void Merge(LSREGR_INTERCEPT group)
     {
         if (
             group.N == 0 ||
@@ -220,4 +225,57 @@ public struct INTERCEPT
         return (slope == SqlDouble.Null || mean_x == SqlDouble.Null ||
             mean_y == SqlDouble.Null ? SqlDouble.Null : mean_y - slope * mean_x);
     }
+}
+
+/// <summary>
+/// Least-Squares Linear Regressions Row Count
+/// </summary>
+[System.Serializable]
+[Microsoft.SqlServer.Server.SqlUserDefinedAggregate(
+    Microsoft.SqlServer.Server.Format.Native,
+    IsInvariantToDuplicates = false,
+    IsInvariantToNulls = true,
+    IsInvariantToOrder = true,
+    IsNullIfEmpty = true,
+    Name = "LSREGR_COUNT")]
+public struct LSREGR_COUNT
+{
+    /// <summary>
+    /// Number of rows
+    /// </summary>
+    private SqlInt16 N { get; set; }
+    /// <summary>
+    /// Function for query processor to intialize the computation 
+    /// of the aggregation.
+    /// </summary>
+    public void Init() { N = 0; }
+    /// <summary>
+    /// Accumulation of the values being passed in
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    public void Accumulate(SqlDouble x, SqlDouble y)
+    {
+        if (x.IsNull || y.IsNull)
+        {/* do nothing */}
+        else
+        { N += 1; }
+    }
+    /// <summary>
+    /// Merge another instance of the aggregate class with current
+    /// instance.
+    /// </summary>
+    /// <param name="group"></param>
+    public void Merge(LSREGR_COUNT group)
+    {
+        if (group.N == 0)
+        {/* if ANY is NULL, then do nothing */}
+        else
+        { N += group.N; }
+    }
+    /// <summary>
+    /// Completes the aggregate computation and returns the result.
+    /// </summary>
+    /// <returns>The result of the aggregation</returns>
+    public SqlDouble Terminate() { return N; }
 }
