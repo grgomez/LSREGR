@@ -53,9 +53,45 @@ create assembly LSREGR
 	with PERMISSION_SET = SAFE;
 go
 
-create aggregate Aggregates.SLOPE (@x float, @y float) returns float
-	external name LSREGR.[SLOPE]
+create aggregate LSREGR_SLOPE (@x float, @y float) returns float
+	external name LSREGR.LSREGR_SLOPE
 go
-drop aggregate Aggregates.SLOPE
+create aggregate LSREGR_INTERCEPT (@x float, @y float) returns float
+	external name LSREGR.LSREGR_INTERCEPT
+go
+create aggregate LSREGR_COUNT (@x float, @y float) returns float
+	external name LSREGR.LSREGR_COUNT
+go
+create aggregate LSREGR_R2 (@x float, @y float) returns float
+	external name LSREGR.LSREGR_R2
+go
+create aggregate LSREGR_AVGX (@x float, @y float) returns float
+	external name LSREGR.LSREGR_AVGX
+go
+create aggregate LSREGR_AVGY (@x float, @y float) returns float
+	external name LSREGR.LSREGR_AVGY
+go
+create aggregate LSREGR_SXX (@x float, @y float) returns float
+	external name LSREGR.LSREGR_SXX
+go
+create aggregate LSREGR_SYY (@x float, @y float) returns float
+	external name LSREGR.LSREGR_SYY
+go
+create aggregate LSREGR_SXY (@x float, @y float) returns float
+	external name LSREGR.LSREGR_SXY
+go
+drop aggregate LSREGR_SLOPE
+drop aggregate LSREGR_INTERCEPT
+drop aggregate LSREGR_COUNT
+drop aggregate LSREGR_R2
+drop aggregate LSREGR_AVGX
+drop aggregate LSREGR_AVGY
+drop aggregate LSREGR_SXX
+drop aggregate LSREGR_SYY
+drop aggregate LSREGR_SXY
 drop assembly LSREGR
+go
+create assembly LSREGR
+	authorization dbo
+	from 'C:\source\LSREGR\bin\x64\Debug\LSREGR.dll'
 go
