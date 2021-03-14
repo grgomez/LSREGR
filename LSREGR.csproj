@@ -63,8 +63,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AVGX.cs" />
+    <Compile Include="AVGY.cs" />
+    <Compile Include="COUNT.cs" />
+    <Compile Include="INTERCEPT.cs" />
+    <Compile Include="R2.cs" />
     <Compile Include="Slope.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SXX.cs" />
+    <Compile Include="SXY.cs" />
+    <Compile Include="SYY.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

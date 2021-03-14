@@ -1,4 +1,5 @@
-﻿/***************************************************************************************************************************************************************************************
+
+/***************************************************************************************************************************************************************************************
  *  @author: German Rafael Gomez Urbina
  *  @email: grgomezu@gmail.com
  *  
@@ -40,9 +41,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Data.SqlTypes;
-
 /// <summary>
-/// Least-Squares Linear Regressions Slope
+/// Least-Squares Linear Regressions x-average
 /// </summary>
 [System.Serializable]
 [Microsoft.SqlServer.Server.SqlUserDefinedAggregate(
@@ -51,29 +51,17 @@ using System.Data.SqlTypes;
     IsInvariantToNulls = true,
     IsInvariantToOrder = true,
     IsNullIfEmpty = true,
-    Name = "LSREGR_SLOPE")]
-public struct LSREGR_SLOPE
+    Name = "LSREGR_AVGX")]
+public struct LSREGR_AVGX
 {
     /// <summary>
     /// Number of rows
     /// </summary>
     private SqlInt64 N { get; set; }
     /// <summary>
-    /// Sxy = Sum(x*y) from 1 to N
-    /// </summary>
-    private SqlDouble Sxy { get; set; }
-    /// <summary>
-    /// Sxx = Sum(x*x) from 1 to N
-    /// </summary>
-    private SqlDouble Sxx { get; set; }
-    /// <summary>
     /// Sx = Sum(x) from 1 to N
     /// </summary>
     private SqlDouble Sx { get; set; }
-    /// <summary>
-    /// Sy = Sum(y) from 1 to N
-    /// </summary>
-    private SqlDouble Sy { get; set; }
     /// <summary>
     /// Function for query processor to intialize the computation 
     /// of the aggregation.
@@ -81,10 +69,7 @@ public struct LSREGR_SLOPE
     public void Init()
     {
         N = 0;
-        Sxy = SqlDouble.Zero;
-        Sxx = SqlDouble.Zero;
         Sx = SqlDouble.Zero;
-        Sy = SqlDouble.Zero;
     }
     /// <summary>
     /// Accumulation of the values being passed in
@@ -98,10 +83,7 @@ public struct LSREGR_SLOPE
         else
         {
             N += 1;
-            Sxy += x * y;
-            Sxx += x * x;
             Sx += x;
-            Sy += y;
         }
     }
     /// <summary>
@@ -109,41 +91,21 @@ public struct LSREGR_SLOPE
     /// instance.
     /// </summary>
     /// <param name="group"></param>
-    public void Merge(LSREGR_SLOPE group)
+    public void Merge(LSREGR_AVGX group)
     {
         if (
-            group.N == 0 || 
-            group.Sxy == SqlDouble.Zero || group.Sxx == SqlDouble.Zero || 
-            group.Sx == SqlDouble.Zero || group.Sy == SqlDouble.Zero)
+            group.N == 0 ||
+            group.Sx == SqlDouble.Zero)
         {/* if ANY is NULL, then do nothing */}
         else
         {
             N += group.N;
-            Sxy += group.Sxy;
-            Sxx += group.Sxx;
             Sx += group.Sx;
-            Sy += group.Sy;
         }
     }
     /// <summary>
     /// Completes the aggregate computation and returns the result.
     /// </summary>
     /// <returns>The result of the aggregation</returns>
-    public SqlDouble Terminate()
-    {
-        return 
-            (N == 0 || Sxy == SqlDouble.Zero || Sxx == SqlDouble.Zero || 
-            Sx == SqlDouble.Zero || Sy == SqlDouble.Zero) ?
-            SqlDouble.Null : (N * Sxy - Sx * Sy) / (N * Sxx - Sx * Sx);
-    }
+    public SqlDouble Terminate() {  return (N == 0 ? SqlDouble.Null : Sx / N); }
 }
-
-
-
-
-
-
-
-
-
-

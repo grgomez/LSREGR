@@ -1,4 +1,4 @@
-﻿/***************************************************************************************************************************************************************************************
+/***************************************************************************************************************************************************************************************
  *  @author: German Rafael Gomez Urbina
  *  @email: grgomezu@gmail.com
  *  
@@ -42,7 +42,7 @@ using System.Threading.Tasks;
 using System.Data.SqlTypes;
 
 /// <summary>
-/// Least-Squares Linear Regressions Slope
+/// Least-Squares Linear Regressions Y-Intercept
 /// </summary>
 [System.Serializable]
 [Microsoft.SqlServer.Server.SqlUserDefinedAggregate(
@@ -51,8 +51,8 @@ using System.Data.SqlTypes;
     IsInvariantToNulls = true,
     IsInvariantToOrder = true,
     IsNullIfEmpty = true,
-    Name = "LSREGR_SLOPE")]
-public struct LSREGR_SLOPE
+    Name = "LSREGR_INTERCEPT")]
+public struct LSREGR_INTERCEPT
 {
     /// <summary>
     /// Number of rows
@@ -109,11 +109,11 @@ public struct LSREGR_SLOPE
     /// instance.
     /// </summary>
     /// <param name="group"></param>
-    public void Merge(LSREGR_SLOPE group)
+    public void Merge(LSREGR_INTERCEPT group)
     {
         if (
-            group.N == 0 || 
-            group.Sxy == SqlDouble.Zero || group.Sxx == SqlDouble.Zero || 
+            group.N == 0 ||
+            group.Sxy == SqlDouble.Zero || group.Sxx == SqlDouble.Zero ||
             group.Sx == SqlDouble.Zero || group.Sy == SqlDouble.Zero)
         {/* if ANY is NULL, then do nothing */}
         else
@@ -131,19 +131,14 @@ public struct LSREGR_SLOPE
     /// <returns>The result of the aggregation</returns>
     public SqlDouble Terminate()
     {
-        return 
-            (N == 0 || Sxy == SqlDouble.Zero || Sxx == SqlDouble.Zero || 
+        SqlDouble slope = (N == 0 || Sxy == SqlDouble.Zero || Sxx == SqlDouble.Zero ||
             Sx == SqlDouble.Zero || Sy == SqlDouble.Zero) ?
             SqlDouble.Null : (N * Sxy - Sx * Sy) / (N * Sxx - Sx * Sx);
+
+        SqlDouble mean_y = (N == 0 ? SqlDouble.Null : Sy / N);
+        SqlDouble mean_x = (N == 0 ? SqlDouble.Null : Sx / N);
+
+        return (slope == SqlDouble.Null || mean_x == SqlDouble.Null ||
+            mean_y == SqlDouble.Null ? SqlDouble.Null : mean_y - slope * mean_x);
     }
 }
-
-
-
-
-
-
-
-
-
-

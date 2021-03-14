@@ -1,4 +1,4 @@
-﻿/***************************************************************************************************************************************************************************************
+/***************************************************************************************************************************************************************************************
  *  @author: German Rafael Gomez Urbina
  *  @email: grgomezu@gmail.com
  *  
@@ -40,9 +40,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Data.SqlTypes;
-
 /// <summary>
-/// Least-Squares Linear Regressions Slope
+/// Least-Squares Linear Regression coefficient of determination
 /// </summary>
 [System.Serializable]
 [Microsoft.SqlServer.Server.SqlUserDefinedAggregate(
@@ -51,8 +50,8 @@ using System.Data.SqlTypes;
     IsInvariantToNulls = true,
     IsInvariantToOrder = true,
     IsNullIfEmpty = true,
-    Name = "LSREGR_SLOPE")]
-public struct LSREGR_SLOPE
+    Name = "LSREGR_R2")]
+public struct LSREGR_R2
 {
     /// <summary>
     /// Number of rows
@@ -75,6 +74,11 @@ public struct LSREGR_SLOPE
     /// </summary>
     private SqlDouble Sy { get; set; }
     /// <summary>
+    /// Syy = Sum(y*y) from 1 to N
+    /// </summary>
+    private SqlDouble Syy { get; set; }
+
+    /// <summary>
     /// Function for query processor to intialize the computation 
     /// of the aggregation.
     /// </summary>
@@ -83,6 +87,7 @@ public struct LSREGR_SLOPE
         N = 0;
         Sxy = SqlDouble.Zero;
         Sxx = SqlDouble.Zero;
+        Syy = SqlDouble.Zero;
         Sx = SqlDouble.Zero;
         Sy = SqlDouble.Zero;
     }
@@ -100,6 +105,7 @@ public struct LSREGR_SLOPE
             N += 1;
             Sxy += x * y;
             Sxx += x * x;
+            Syy += y * y;
             Sx += x;
             Sy += y;
         }
@@ -109,18 +115,20 @@ public struct LSREGR_SLOPE
     /// instance.
     /// </summary>
     /// <param name="group"></param>
-    public void Merge(LSREGR_SLOPE group)
+    public void Merge(LSREGR_R2 group)
     {
         if (
-            group.N == 0 || 
-            group.Sxy == SqlDouble.Zero || group.Sxx == SqlDouble.Zero || 
-            group.Sx == SqlDouble.Zero || group.Sy == SqlDouble.Zero)
+            group.N == 0 ||
+            group.Sxy == SqlDouble.Zero || group.Sxx == SqlDouble.Zero ||
+            group.Sx == SqlDouble.Zero  || group.Sy == SqlDouble.Zero  ||
+            group.Syy == SqlDouble.Zero)
         {/* if ANY is NULL, then do nothing */}
         else
         {
             N += group.N;
             Sxy += group.Sxy;
             Sxx += group.Sxx;
+            Syy += group.Syy;
             Sx += group.Sx;
             Sy += group.Sy;
         }
@@ -131,19 +139,27 @@ public struct LSREGR_SLOPE
     /// <returns>The result of the aggregation</returns>
     public SqlDouble Terminate()
     {
-        return 
-            (N == 0 || Sxy == SqlDouble.Zero || Sxx == SqlDouble.Zero || 
+        SqlDouble slope = (N == 0 || Sxy == SqlDouble.Zero || Sxx == SqlDouble.Zero ||
             Sx == SqlDouble.Zero || Sy == SqlDouble.Zero) ?
             SqlDouble.Null : (N * Sxy - Sx * Sy) / (N * Sxx - Sx * Sx);
+
+        SqlDouble mean_y = (N == 0 ? SqlDouble.Null : Sy / N);
+        SqlDouble mean_x = (N == 0 ? SqlDouble.Null : Sx / N);
+
+        SqlDouble intercept = (slope == SqlDouble.Null || mean_x == SqlDouble.Null ||
+            mean_y == SqlDouble.Null ? SqlDouble.Null : mean_y - slope * mean_x);
+
+        if (intercept == SqlDouble.Null || slope == SqlDouble.Null ) //|| List_y.Count == 0 || List_x.Count == 0)
+        {
+            return SqlDouble.Null;
+        } 
+        else
+        {
+            SqlDouble sr = Syy - (2 * intercept * Sy) + (2 * intercept * slope * Sx) - (2 * slope * Sxy) + (slope * slope * Sxx) + (intercept * intercept * N);
+            SqlDouble st = Syy - (2 * mean_y * Sy) + (mean_y * mean_y * N);
+
+            return (st == SqlDouble.Null || sr == SqlDouble.Null || st == SqlDouble.Zero) ? 
+                SqlDouble.Null : (st - sr) / st;
+        }
     }
 }
-
-
-
-
-
-
-
-
-
-

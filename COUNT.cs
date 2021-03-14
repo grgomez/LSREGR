@@ -1,4 +1,4 @@
-﻿/***************************************************************************************************************************************************************************************
+/***************************************************************************************************************************************************************************************
  *  @author: German Rafael Gomez Urbina
  *  @email: grgomezu@gmail.com
  *  
@@ -33,16 +33,14 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * 
  * ***************************************************************************************************************************************************************************************/
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Data.SqlTypes;
-
 /// <summary>
-/// Least-Squares Linear Regressions Slope
+/// Least-Squares Linear Regressions Row Count
 /// </summary>
 [System.Serializable]
 [Microsoft.SqlServer.Server.SqlUserDefinedAggregate(
@@ -51,41 +49,18 @@ using System.Data.SqlTypes;
     IsInvariantToNulls = true,
     IsInvariantToOrder = true,
     IsNullIfEmpty = true,
-    Name = "LSREGR_SLOPE")]
-public struct LSREGR_SLOPE
+    Name = "LSREGR_COUNT")]
+public struct LSREGR_COUNT
 {
     /// <summary>
     /// Number of rows
     /// </summary>
     private SqlInt64 N { get; set; }
     /// <summary>
-    /// Sxy = Sum(x*y) from 1 to N
-    /// </summary>
-    private SqlDouble Sxy { get; set; }
-    /// <summary>
-    /// Sxx = Sum(x*x) from 1 to N
-    /// </summary>
-    private SqlDouble Sxx { get; set; }
-    /// <summary>
-    /// Sx = Sum(x) from 1 to N
-    /// </summary>
-    private SqlDouble Sx { get; set; }
-    /// <summary>
-    /// Sy = Sum(y) from 1 to N
-    /// </summary>
-    private SqlDouble Sy { get; set; }
-    /// <summary>
     /// Function for query processor to intialize the computation 
     /// of the aggregation.
     /// </summary>
-    public void Init()
-    {
-        N = 0;
-        Sxy = SqlDouble.Zero;
-        Sxx = SqlDouble.Zero;
-        Sx = SqlDouble.Zero;
-        Sy = SqlDouble.Zero;
-    }
+    public void Init() { N = 0; }
     /// <summary>
     /// Accumulation of the values being passed in
     /// </summary>
@@ -96,54 +71,23 @@ public struct LSREGR_SLOPE
         if (x.IsNull || y.IsNull)
         {/* do nothing */}
         else
-        {
-            N += 1;
-            Sxy += x * y;
-            Sxx += x * x;
-            Sx += x;
-            Sy += y;
-        }
+        { N += 1; }
     }
     /// <summary>
     /// Merge another instance of the aggregate class with current
     /// instance.
     /// </summary>
     /// <param name="group"></param>
-    public void Merge(LSREGR_SLOPE group)
+    public void Merge(LSREGR_COUNT group)
     {
-        if (
-            group.N == 0 || 
-            group.Sxy == SqlDouble.Zero || group.Sxx == SqlDouble.Zero || 
-            group.Sx == SqlDouble.Zero || group.Sy == SqlDouble.Zero)
+        if (group.N == 0)
         {/* if ANY is NULL, then do nothing */}
         else
-        {
-            N += group.N;
-            Sxy += group.Sxy;
-            Sxx += group.Sxx;
-            Sx += group.Sx;
-            Sy += group.Sy;
-        }
+        { N += group.N; }
     }
     /// <summary>
     /// Completes the aggregate computation and returns the result.
     /// </summary>
     /// <returns>The result of the aggregation</returns>
-    public SqlDouble Terminate()
-    {
-        return 
-            (N == 0 || Sxy == SqlDouble.Zero || Sxx == SqlDouble.Zero || 
-            Sx == SqlDouble.Zero || Sy == SqlDouble.Zero) ?
-            SqlDouble.Null : (N * Sxy - Sx * Sy) / (N * Sxx - Sx * Sx);
-    }
+    public SqlDouble Terminate() { return N; }
 }
-
-
-
-
-
-
-
-
-
-
